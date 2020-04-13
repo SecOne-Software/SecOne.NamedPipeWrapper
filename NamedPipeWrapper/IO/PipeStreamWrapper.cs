@@ -85,6 +85,12 @@ namespace NamedPipeWrapper.IO
             _writer = new PipeStreamWriter<TWrite>(BaseStream);
         }
 
+        public void SetEncryptionKey(byte[] key)
+        {
+            _reader.EncryptionKey = key;
+            _writer.EncryptionKey = key;
+        }
+
         /// <summary>
         /// Reads the next object from the pipe.  This method blocks until an object is sent
         /// or the pipe is disconnected.

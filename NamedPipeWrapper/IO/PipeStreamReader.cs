@@ -79,32 +79,26 @@ namespace NamedPipeWrapper.IO
             }
         }
 
-        //https://stackoverflow.com/questions/31486028/decrypting-cryptostream-into-memorystream
-        private byte[] DecryptBytes(byte[] bytes, byte[] key)
+        public static byte[] DecryptBytes(byte[] bytes, byte[] key)
         {
             var aes = new AesCryptoServiceProvider();
-
-            using (var memStream = new MemoryStream(bytes))
+            using (var outputStream = new MemoryStream())
             {
-                var iv = new byte[16];
-                memStream.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
-
-                using (var cryptStream = new CryptoStream(memStream, aes.CreateDecryptor(key, iv), CryptoStreamMode.Read))
+                using (var ms = new MemoryStream(bytes))
                 {
-                    using (var decryptedStream = new MemoryStream())
+                    var iv = new byte[16];
+                    ms.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
+
+                    using (var cs = new CryptoStream(outputStream, aes.CreateDecryptor(key, iv), CryptoStreamMode.Write))
                     {
-                        int data;
-
-                        while ((data = cryptStream.ReadByte()) != -1)
-                        {
-                            decryptedStream.WriteByte((byte)data);
-                        }
-
-                        return decryptedStream.ToArray();
+                        cs.Write(bytes, 16, bytes.Length - 16);
+                        cs.Close();
                     }
+                    return outputStream.ToArray();
                 }
             }
         }
+    
 
         #endregion
 

@@ -67,6 +67,11 @@ namespace NamedPipeWrapper
             _streamWrapper = new PipeStreamWrapper<TRead, TWrite>(serverStream);
         }
 
+        public void SetEncryptionKey(byte[] key)
+        {
+            _streamWrapper.SetEncryptionKey(key);
+        }
+
         /// <summary>
         /// Begins reading from and writing to the named pipe on a background thread.
         /// This method returns immediately.
