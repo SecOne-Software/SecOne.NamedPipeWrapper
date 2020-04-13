@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
 
 namespace NamedPipeWrapper.IO
 {
@@ -20,6 +21,8 @@ namespace NamedPipeWrapper.IO
         /// Gets the underlying <c>PipeStream</c> object.
         /// </summary>
         public PipeStream BaseStream { get; private set; }
+
+        public byte[] EncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -68,6 +71,28 @@ namespace NamedPipeWrapper.IO
             BaseStream.Flush();
         }
 
+        //https://stackoverflow.com/questions/8041451/good-aes-initialization-vector-practice
+        //Encrypt and decrypt data quickly, within or between machine processes
+        private byte[] EncryptBytes(byte[] message, byte[] key)
+        {
+            var aes = new AesCryptoServiceProvider();
+            var iv = aes.IV;
+
+            using (var memStream = new MemoryStream())
+            {
+                memStream.Write(iv, 0, iv.Length);  // Add the IV to the first 16 bytes of the encrypted value
+
+                using (var cryptStream = new CryptoStream(memStream, aes.CreateEncryptor(key, aes.IV), CryptoStreamMode.Write))
+                {
+                    using (var writer = new StreamWriter(cryptStream))
+                    {
+                        writer.Write(message);
+                    }
+                }
+                return memStream.ToArray();
+            }
+        }
+
         #endregion
 
         /// <summary>
@@ -78,6 +103,10 @@ namespace NamedPipeWrapper.IO
         public void WriteObject(T obj)
         {
             var data = Serialize(obj);
+
+            //Check if the data should be serialized
+            if (EncryptionKey != null) data = EncryptBytes(data, EncryptionKey);
+
             WriteLength(data.Length);
             WriteObject(data);
             Flush();

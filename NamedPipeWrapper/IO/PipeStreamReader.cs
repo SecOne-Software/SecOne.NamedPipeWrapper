@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
 
 namespace NamedPipeWrapper.IO
 {
@@ -25,6 +26,8 @@ namespace NamedPipeWrapper.IO
         /// Gets a value indicating whether the pipe is connected or not.
         /// </summary>
         public bool IsConnected { get; private set; }
+
+        public byte[] EncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -66,9 +69,40 @@ namespace NamedPipeWrapper.IO
         {
             var data = new byte[len];
             BaseStream.Read(data, 0, len);
+
+            //Check if we have to decrypt this data
+            if (EncryptionKey != null) data = DecryptBytes(data, EncryptionKey);
+
             using (var memoryStream = new MemoryStream(data))
             {
                 return (T) _binaryFormatter.Deserialize(memoryStream);
+            }
+        }
+
+        //https://stackoverflow.com/questions/31486028/decrypting-cryptostream-into-memorystream
+        private byte[] DecryptBytes(byte[] bytes, byte[] key)
+        {
+            var aes = new AesCryptoServiceProvider();
+
+            using (var memStream = new MemoryStream(bytes))
+            {
+                var iv = new byte[16];
+                memStream.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
+
+                using (var cryptStream = new CryptoStream(memStream, aes.CreateDecryptor(key, iv), CryptoStreamMode.Read))
+                {
+                    using (var decryptedStream = new MemoryStream())
+                    {
+                        int data;
+
+                        while ((data = cryptStream.ReadByte()) != -1)
+                        {
+                            decryptedStream.WriteByte((byte)data);
+                        }
+
+                        return decryptedStream.ToArray();
+                    }
+                }
             }
         }
 
