@@ -99,7 +99,7 @@ namespace NamedPipeWrapper.IO
         {
             var data = Serialize(obj);
 
-            //Check if the data should be serialized
+            //Check if the data should be encrypted
             if (EncryptionKey != null) data = EncryptBytes(data, EncryptionKey);
 
             WriteLength(data.Length);

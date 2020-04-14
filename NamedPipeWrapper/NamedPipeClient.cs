@@ -100,8 +100,7 @@ namespace NamedPipeWrapper
         /// <param name="message">Message to send to the server.</param>
         public void PushMessage(TWrite message)
         {
-            if (_connection != null)
-                _connection.PushMessage(message);
+            if (_connection != null) _connection.PushMessage(message);
         }
 
         /// <summary>
@@ -110,8 +109,12 @@ namespace NamedPipeWrapper
         public void Stop()
         {
             _closedExplicitly = true;
-            if (_connection != null)
-                _connection.Close();
+            if (_connection != null) _connection.Close();
+        }
+
+        public void SetEncryptionKey(byte[] key)
+        {
+            _connection.SetEncryptionKey(key);
         }
 
         #region Wait for connection/disconnection

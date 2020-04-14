@@ -36,7 +36,7 @@ namespace ExampleGUI
         private void btnTest_Click(object sender, EventArgs e)
         {
 
-            _streamWrapper.SetEncryptionKey(Convert.FromBase64String("AAECAwQFBgcICQoLDA0ODw=="));
+            //_streamWrapper.SetEncryptionKey(Convert.FromBase64String("AAECAwQFBgcICQoLDA0ODw=="));
             Console.WriteLine("Set encryption key.");
         }
     }
