@@ -59,6 +59,7 @@ namespace NamedPipeWrapper
         private readonly BlockingCollection<TWrite> _writeQueue = new BlockingCollection<TWrite>();
 
         private bool _notifiedSucceeded;
+        private byte[] _futureSymmetricKey;
 
         internal NamedPipeConnection(int id, string name, PipeStream serverStream)
         {
@@ -67,9 +68,20 @@ namespace NamedPipeWrapper
             _streamWrapper = new PipeStreamWrapper<TRead, TWrite>(serverStream);
         }
 
-        public void SetEncryptionKey(byte[] key)
+        public void SetEncryptionKey(byte[] key, bool queue)
         {
-            _streamWrapper.SetEncryptionKey(key);
+            if (queue)
+            {
+                Logger.Write("Setting key after next write.");
+
+                //Set the value for the future once the next write has completed
+                _futureSymmetricKey = key;
+            }
+            else
+            {
+                Logger.Write("Setting key immediately.");
+                _streamWrapper.SetEncryptionKey(key);
+            }
         }
 
         /// <summary>
@@ -177,25 +189,29 @@ namespace NamedPipeWrapper
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="TWrite"/> is not marked as serializable.</exception>
         private void WritePipe()
         {
-            
-                while (IsConnected && _streamWrapper.CanWrite)
+            while (IsConnected && _streamWrapper.CanWrite)
+            {
+                try
                 {
-                    try
+                    //using blockcollection, we needn't use singal to wait for result.
+                    //_writeSignal.WaitOne();
+                    //while (_writeQueue.Count > 0)
                     {
-                        //using blockcollection, we needn't use singal to wait for result.
-                        //_writeSignal.WaitOne();
-                        //while (_writeQueue.Count > 0)
+                        _streamWrapper.WriteObject(_writeQueue.Take());
+                        _streamWrapper.WaitForPipeDrain();
+
+                        if (_futureSymmetricKey != null)
                         {
-                            _streamWrapper.WriteObject(_writeQueue.Take());
-                            _streamWrapper.WaitForPipeDrain();
+                            _streamWrapper.SetEncryptionKey(_futureSymmetricKey);
+                            _futureSymmetricKey = null;
                         }
                     }
-                    catch
-                    {
-                    //we must igonre exception, otherwise, the namepipe wrapper will stop work.
+                }
+                catch
+                {
+                    //we must ignore exception, otherwise, the namepipe wrapper will stop work.
                 }
             }
-          
         }
     }
 

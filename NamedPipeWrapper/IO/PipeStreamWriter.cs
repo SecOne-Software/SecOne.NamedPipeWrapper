@@ -97,6 +97,9 @@ namespace NamedPipeWrapper.IO
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="T"/> is not marked as serializable.</exception>
         public void WriteObject(T obj)
         {
+            var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
+            Logger.Write($"obj: {obj}, EncryptionKey: {keyString}");
+
             var data = Serialize(obj);
 
             //Check if the data should be encrypted

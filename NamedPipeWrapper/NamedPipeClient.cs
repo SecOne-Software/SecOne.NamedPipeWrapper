@@ -114,7 +114,7 @@ namespace NamedPipeWrapper
 
         public void SetEncryptionKey(byte[] key)
         {
-            _connection.SetEncryptionKey(key);
+            _connection.SetEncryptionKey(key, false);
         }
 
         #region Wait for connection/disconnection

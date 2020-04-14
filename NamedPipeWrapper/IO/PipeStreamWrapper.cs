@@ -87,6 +87,9 @@ namespace NamedPipeWrapper.IO
 
         public void SetEncryptionKey(byte[] key)
         {
+            var keyString = (key == null) ? "null" : $"{key.Length} bytes";
+            Logger.Write($"Setting encryption key in wrapper ({keyString}).");
+
             _reader.EncryptionKey = key;
             _writer.EncryptionKey = key;
         }

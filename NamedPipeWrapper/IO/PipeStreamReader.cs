@@ -67,6 +67,9 @@ namespace NamedPipeWrapper.IO
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="T"/> is not marked as serializable.</exception>
         private T ReadObject(int len)
         {
+            var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
+            Logger.Write($"Len: {len}, EncryptionKey: {keyString}");
+
             var data = new byte[len];
             BaseStream.Read(data, 0, len);
 
