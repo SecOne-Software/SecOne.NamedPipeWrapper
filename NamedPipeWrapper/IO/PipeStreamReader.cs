@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 
-namespace NamedPipeWrapper.IO
+namespace SecOne.NamedPipeWrapper.IO
 {
     /// <summary>
     /// Wraps a <see cref="PipeStream"/> object and reads from it.  Deserializes binary data sent by a <see cref="PipeStreamWriter{T}"/>
@@ -68,7 +66,6 @@ namespace NamedPipeWrapper.IO
         private T ReadObject(int len)
         {
             var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
-            Logger.Write($"Len: {len}, EncryptionKey: {keyString}");
 
             var data = new byte[len];
             BaseStream.Read(data, 0, len);

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NamedPipeWrapper.Threading
+namespace SecOne.NamedPipeWrapper.Threading
 {
     class Worker
     {

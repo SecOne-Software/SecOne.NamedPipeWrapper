@@ -1,10 +1,10 @@
-﻿using NamedPipeWrapper.IO;
-using NamedPipeWrapper.Threading;
+﻿using SecOne.NamedPipeWrapper.IO;
+using SecOne.NamedPipeWrapper.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipes;
 
-namespace NamedPipeWrapper
+namespace SecOne.NamedPipeWrapper
 {
     /// <summary>
     /// Wraps a <see cref="NamedPipeServerStream"/> and provides multiple simultaneous client connection handling.

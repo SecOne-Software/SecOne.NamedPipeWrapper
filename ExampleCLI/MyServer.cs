@@ -1,5 +1,6 @@
-﻿using System;
-using NamedPipeWrapper;
+﻿using SecOne.NamedPipeWrapper;
+using System;
+
 
 namespace ExampleCLI
 {

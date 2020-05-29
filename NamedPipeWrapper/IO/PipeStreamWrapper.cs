@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
 
-namespace NamedPipeWrapper.IO
+namespace SecOne.NamedPipeWrapper.IO
 {
     /// <summary>
     /// Wraps a <see cref="PipeStream"/> object to read and write .NET CLR objects.
@@ -88,7 +85,6 @@ namespace NamedPipeWrapper.IO
         public void SetEncryptionKey(byte[] key)
         {
             var keyString = (key == null) ? "null" : $"{key.Length} bytes";
-            Logger.Write($"Setting encryption key in wrapper ({keyString}).");
 
             _reader.EncryptionKey = key;
             _writer.EncryptionKey = key;

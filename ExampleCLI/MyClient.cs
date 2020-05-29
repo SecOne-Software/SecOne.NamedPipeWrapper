@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NamedPipeWrapper;
+using SecOne.NamedPipeWrapper;
+using SecOne.NamedPipeWrapper.IO;
+using SecOne.NamedPipeWrapper.Native;
+using SecOne.NamedPipeWrapper.Threading;
+
 
 namespace ExampleCLI
 {

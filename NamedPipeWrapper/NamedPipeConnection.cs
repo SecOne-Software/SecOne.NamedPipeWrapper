@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO.Pipes;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading;
-using NamedPipeWrapper.IO;
-using NamedPipeWrapper.Threading;
+﻿using SecOne.NamedPipeWrapper.IO;
+using SecOne.NamedPipeWrapper.Threading;
+using System;
 using System.Collections.Concurrent;
+using System.IO.Pipes;
+using System.Runtime.Serialization;
+using System.Threading;
 
-namespace NamedPipeWrapper
+namespace SecOne.NamedPipeWrapper
 {
     /// <summary>
     /// Represents a connection between a named pipe client and server.
@@ -72,14 +69,11 @@ namespace NamedPipeWrapper
         {
             if (queue)
             {
-                Logger.Write("Setting key after next write.");
-
                 //Set the value for the future once the next write has completed
                 _futureSymmetricKey = key;
             }
             else
             {
-                Logger.Write("Setting key immediately.");
                 _streamWrapper.SetEncryptionKey(key);
             }
         }

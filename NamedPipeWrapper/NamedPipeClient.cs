@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using SecOne.NamedPipeWrapper.IO;
+using SecOne.NamedPipeWrapper.Native;
+using SecOne.NamedPipeWrapper.Threading;
+using System;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using NamedPipeWrapper.IO;
-using NamedPipeWrapper.Native;
-using NamedPipeWrapper.Threading;
 
-namespace NamedPipeWrapper
+namespace SecOne.NamedPipeWrapper
 {
     /// <summary>
     /// Wraps a <see cref="NamedPipeClientStream"/>.

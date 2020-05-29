@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace NamedPipeWrapper.Native
+namespace SecOne.NamedPipeWrapper.Native
 {
     internal sealed class Kernel32
     {

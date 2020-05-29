@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using NUnit.Framework;
-using NamedPipeWrapper;
+
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
+using SecOne.NamedPipeWrapper;
 
 namespace UnitTests
 {

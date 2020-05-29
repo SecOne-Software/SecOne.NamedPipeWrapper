@@ -1,14 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 
-namespace NamedPipeWrapper.IO
+namespace SecOne.NamedPipeWrapper.IO
 {
     /// <summary>
     /// Wraps a <see cref="PipeStream"/> object and writes to it.  Serializes .NET CLR objects specified by <typeparamref name="T"/>
@@ -98,8 +96,6 @@ namespace NamedPipeWrapper.IO
         public void WriteObject(T obj)
         {
             var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
-            Logger.Write($"obj: {obj}, EncryptionKey: {keyString}");
-
             var data = Serialize(obj);
 
             //Check if the data should be encrypted
