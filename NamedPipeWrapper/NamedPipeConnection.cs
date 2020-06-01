@@ -169,9 +169,10 @@ namespace SecOne.NamedPipeWrapper
                     if (ReceiveMessage != null)
                         ReceiveMessage(this, obj);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    //we must igonre exception, otherwise, the namepipe wrapper will stop work.
+                    Logger.Write($"Exception reading pipe: {ex}");
+                    //we must ignore exception, otherwise, the namepipe wrapper will stop work.
                 }
             }
             
