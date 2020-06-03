@@ -56,15 +56,16 @@ namespace SecOne.NamedPipeWrapper
                 log += " " + line;
             }
 
-            if (_filepath == null) {
+            if (_filepath == null)
+            {
                 var now = DateTime.Now;
-                string path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().GetName().CodeBase);
-                path = path.Replace("file:\\", "");
 
-                path = "C:\\Windows";
-                //path = AppDomain.CurrentDomain.BaseDirectory;
+                var path = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.System)).FullName;
+                path = $"{path}\\Logs\\SecOne";
 
-                _filepath = $"{path}\\npw-{now.Ticks}.txt";
+                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+
+                _filepath = $"{path}\\NamedPipeWrapper-{now.Ticks}.txt";
             }
 
             lock (_lock)
