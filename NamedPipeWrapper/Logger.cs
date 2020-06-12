@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace SecOne.NamedPipeWrapper
 {
-    public static class Logger
+    internal static class Logger
     {
         private static string _filepath;
-        private readonly static object _lock = new object();
+        private static readonly object _signal = new object();
 
         static Logger()
         {
@@ -24,55 +26,54 @@ namespace SecOne.NamedPipeWrapper
             };
         }
 
-        public static void Write(string line = null, string caller = null)
+        public static void Write(string line = null, [CallerMemberName] string callerMemberName = "")
         {
-            if (string.IsNullOrWhiteSpace(caller))
+            try
             {
+
                 var method = new StackTrace().GetFrame(1).GetMethod();
+                var caller = $"{method.DeclaringType?.Name}.{method.Name}";
 
-                try
+                //Detect Async continuation
+                if (method.Name.EndsWith("MoveNext")) caller = $"ManagedThread<{Thread.CurrentThread.ManagedThreadId}>.{callerMemberName}";
+
+                var log = $"{DateTimeOffset.UtcNow:u} [{caller}]";
+
+                if (!string.IsNullOrWhiteSpace(line))
                 {
-                    if (method.DeclaringType.Name != null && method.DeclaringType.Name.StartsWith("<"))
-                    {
-                        var name = method.DeclaringType.Name;
-                        var pos = name.IndexOf('>');
-                        caller = name.Substring(0, pos+1);
-                    }
-                    else
-                    {
-                        caller = $"{method.DeclaringType?.Name}.{method.Name}";
-                    }
+                    log += " " + line;
                 }
-                catch
+
+                lock (_signal)
                 {
-                    caller = $"{method.DeclaringType?.Name}.{method.Name}";
+                    if (_filepath == null)
+                    {
+                        var path = GetPath();
+
+                        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+
+                        _filepath = $"{path}\\{GetName()}-{DateTime.Now.Ticks}.txt";
+                    }
+
+                    Console.WriteLine(log);
+                    File.AppendAllText(_filepath, log + Environment.NewLine);
                 }
             }
-
-            var log = $"{DateTimeOffset.UtcNow:u} [{caller}]";
-
-            if (!string.IsNullOrWhiteSpace(line))
+            catch
             {
-                log += " " + line;
+
             }
+        }
 
-            if (_filepath == null)
-            {
-                var now = DateTime.Now;
+        private static string GetName()
+        {
+            return "NamedPipeWrapper";
+        }
 
-                var path = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.System)).FullName;
-                path = $"{path}\\Logs\\SecOne";
-
-                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-
-                _filepath = $"{path}\\NamedPipeWrapper-{now.Ticks}.txt";
-            }
-
-            lock (_lock)
-            {
-                Console.WriteLine(log);
-                File.AppendAllText(_filepath, log + Environment.NewLine);
-            }
+        private static string GetPath()
+        {
+            var path = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.System)).FullName;
+            return $"{path}\\Logs\\SecOne";
         }
     }
 }
