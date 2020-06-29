@@ -6,17 +6,25 @@ using System.Threading;
 
 namespace SecOne.NamedPipeWrapper
 {
-    internal static class Logger
+    public static class Logger
     {
         private static string _filepath;
         private static readonly object _signal = new object();
 
+        public static bool Enabled { get; set; }
+        public static string Name { get; set; }
+        public static string Path { get; set; }
+
         static Logger()
         {
+            Name = "NamedPipeWrapper";
+            Path = $"{Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.System)).FullName}\\Logs\\SecOne";
+
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
                 try
                 {
+                    Write("An unhandled exception occurred.");
                     Write(e.ExceptionObject.ToString());
                 }
                 catch (Exception ex)
@@ -28,9 +36,10 @@ namespace SecOne.NamedPipeWrapper
 
         public static void Write(string line = null, [CallerMemberName] string callerMemberName = "")
         {
+            if (!Enabled) return;
+
             try
             {
-
                 var method = new StackTrace().GetFrame(1).GetMethod();
                 var caller = $"{method.DeclaringType?.Name}.{method.Name}";
 
@@ -46,17 +55,10 @@ namespace SecOne.NamedPipeWrapper
 
                 lock (_signal)
                 {
-                    if (_filepath == null)
-                    {
-                        var path = GetPath();
-
-                        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-
-                        _filepath = $"{path}\\{GetName()}-{DateTime.Now.Ticks}.txt";
-                    }
+                    var filePath = GetFilePath();
 
                     Console.WriteLine(log);
-                    File.AppendAllText(_filepath, log + Environment.NewLine);
+                    File.AppendAllText(filePath, log + Environment.NewLine);
                 }
             }
             catch
@@ -65,15 +67,16 @@ namespace SecOne.NamedPipeWrapper
             }
         }
 
-        private static string GetName()
+        private static string GetFilePath()
         {
-            return "NamedPipeWrapper";
-        }
+            if (_filepath == null)
+            {
+                if (!Directory.Exists(Path)) Directory.CreateDirectory(Path);
 
-        private static string GetPath()
-        {
-            var path = Directory.GetParent(Environment.GetFolderPath(Environment.SpecialFolder.System)).FullName;
-            return $"{path}\\Logs\\SecOne";
+                _filepath = $"{Path}\\{Name}-{DateTime.Now.Ticks}.txt";
+            }
+
+            return _filepath;
         }
     }
 }
