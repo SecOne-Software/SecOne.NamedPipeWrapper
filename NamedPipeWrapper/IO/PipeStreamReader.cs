@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace SecOne.NamedPipeWrapper.IO
 {
@@ -79,26 +81,47 @@ namespace SecOne.NamedPipeWrapper.IO
             }
         }
 
-        public static byte[] DecryptBytes(byte[] bytes, byte[] key)
+        private byte[] DecryptBytes(byte[] bytes, byte[] key)
         {
-            var aes = new AesCryptoServiceProvider();
-            using (var outputStream = new MemoryStream())
+            using (var hashAlgorithm = new SHA256Managed())
             {
-                using (var ms = new MemoryStream(bytes))
-                {
-                    var iv = new byte[16];
-                    ms.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
+                //We derive a two keys, using sha256 hash, one Ke for encryption, the other Km for the mac
+                var keyMaterialBytes = hashAlgorithm.ComputeHash(key);
+                var ke = keyMaterialBytes.Take(16).ToArray();
+                var km = keyMaterialBytes.Skip(16).ToArray();
 
-                    using (var cs = new CryptoStream(outputStream, aes.CreateDecryptor(key, iv), CryptoStreamMode.Write))
+                var mac = bytes.Skip(bytes.Length - 32).ToArray();
+                var cypher = bytes.Take(bytes.Length - 32).ToArray();
+
+                //Verify the mac
+                var hash = new HMACSHA256(km);
+                var verify = hash.ComputeHash(cypher);
+
+                if (!verify.SequenceEqual(mac)) throw new Exception("MAC supplied does not match.");
+
+                //Decrypt the remaining bytes
+                //Note this uses BC block mode by default
+                using (var aes = new AesCryptoServiceProvider())
+                {
+                    using (var outputStream = new MemoryStream())
                     {
-                        cs.Write(bytes, 16, bytes.Length - 16);
-                        cs.Close();
+                        using (var ms = new MemoryStream(cypher))
+                        {
+                            var iv = new byte[16];
+                            ms.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
+
+                            using (var cs = new CryptoStream(outputStream, aes.CreateDecryptor(ke, iv), CryptoStreamMode.Write))
+                            {
+                                cs.Write(cypher, 16, cypher.Length - 16);
+                                cs.Close();
+                            }
+
+                            return outputStream.ToArray();
+                        }
                     }
-                    return outputStream.ToArray();
                 }
             }
         }
-    
 
         #endregion
 
@@ -108,7 +131,7 @@ namespace SecOne.NamedPipeWrapper.IO
         /// </summary>
         /// <returns>The next object read from the pipe, or <c>null</c> if the pipe disconnected.</returns>
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="T"/> is not marked as serializable.</exception>
-        public T ReadObject()
+         public T ReadObject()
         {
             var len = ReadLength();
             return len == 0 ? default(T) : ReadObject(len);

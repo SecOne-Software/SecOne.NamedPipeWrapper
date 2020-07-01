@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -69,20 +70,42 @@ namespace SecOne.NamedPipeWrapper.IO
             BaseStream.Flush();
         }
 
-        public static byte[] EncryptBytes(byte[] message, byte[] key)
+        private byte[] EncryptBytes(byte[] message, byte[] key)
         {
-            var aes = new AesCryptoServiceProvider();
-            var iv = aes.IV;
-
-            using (var ms = new MemoryStream())
+            using (var aes = new AesCryptoServiceProvider())
             {
-                ms.Write(iv, 0, iv.Length);  // Add the IV to the first 16 bytes of the encrypted value
-                using (var cs = new CryptoStream(ms, aes.CreateEncryptor(key, aes.IV), CryptoStreamMode.Write))
+                var iv = aes.IV;
+
+                using (var hashAlgorithm = new SHA256Managed())
                 {
-                    cs.Write(message, 0, message.Length);
-                    cs.Close();
+                    //We derive a two keys, using sha256 hash, one Ke for encryption, the other Km for the mac
+                    var keyMaterialBytes = hashAlgorithm.ComputeHash(key);
+                    var ke = keyMaterialBytes.Take(16).ToArray();
+                    var km = keyMaterialBytes.Skip(16).ToArray();
+
+                    //Encrypt the data
+                    using (var ms = new MemoryStream())
+                    {
+                        ms.Write(iv, 0, iv.Length);  // Add the IV to the first 16 bytes of the encrypted value
+
+                        using (var cs = new CryptoStream(ms, aes.CreateEncryptor(ke, aes.IV), CryptoStreamMode.Write))
+                        {
+                            cs.Write(message, 0, message.Length);
+                            cs.Close();
+                        }
+
+                        var cypher = ms.ToArray();
+                        var hash = new HMACSHA256(km);
+                        var mac = hash.ComputeHash(cypher);
+
+                        //Append the MAC to the end of the array of bytes
+                        byte[] output = new byte[cypher.Length + mac.Length];
+                        Buffer.BlockCopy(cypher, 0, output, 0, cypher.Length);
+                        Buffer.BlockCopy(mac, 0, output, cypher.Length, mac.Length);
+
+                        return output;
+                    }
                 }
-                return ms.ToArray();
             }
         }
 
