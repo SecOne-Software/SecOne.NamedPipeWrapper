@@ -67,17 +67,24 @@ namespace SecOne.NamedPipeWrapper.IO
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="T"/> is not marked as serializable.</exception>
         private T ReadObject(int len)
         {
-            var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
-
             var data = new byte[len];
             BaseStream.Read(data, 0, len);
 
-            //Check if we have to decrypt this data
-            if (EncryptionKey != null) data = DecryptBytes(data, EncryptionKey);
+            //Check if we have to decrypt this data first
+            if (EncryptionKey != null)
+            {
+                var encryptedData = DecryptBytes(data, EncryptionKey);
+                Array.Clear(data, 0, data.Length);
+
+                data = encryptedData;
+            }
 
             using (var memoryStream = new MemoryStream(data))
             {
-                return (T) _binaryFormatter.Deserialize(memoryStream);
+                var result = (T) _binaryFormatter.Deserialize(memoryStream);
+                Array.Clear(data, 0, data.Length);
+
+                return result;
             }
         }
 

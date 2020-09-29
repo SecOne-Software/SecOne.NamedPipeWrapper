@@ -44,6 +44,10 @@ namespace SecOne.NamedPipeWrapper.IO
                 using (var memoryStream = new MemoryStream())
                 {
                     _binaryFormatter.Serialize(memoryStream, obj);
+
+                    //Check if we should return an encrypted array of data instead
+                    if (EncryptionKey != null) return EncryptStream(memoryStream, EncryptionKey);
+
                     return memoryStream.ToArray();
                 }
             }
@@ -70,7 +74,7 @@ namespace SecOne.NamedPipeWrapper.IO
             BaseStream.Flush();
         }
 
-        private byte[] EncryptBytes(byte[] message, byte[] key)
+        private byte[] EncryptStream(MemoryStream message, byte[] key)
         {
             using (var aes = new AesCryptoServiceProvider())
             {
@@ -90,8 +94,12 @@ namespace SecOne.NamedPipeWrapper.IO
 
                         using (var cs = new CryptoStream(ms, aes.CreateEncryptor(ke, aes.IV), CryptoStreamMode.Write))
                         {
-                            cs.Write(message, 0, message.Length);
+                            var messageBytes = message.ToArray();
+
+                            cs.Write(messageBytes, 0, messageBytes.Length);
                             cs.Close();
+
+                            Array.Clear(messageBytes, 0, messageBytes.Length);
                         }
 
                         var cypher = ms.ToArray();
@@ -118,15 +126,14 @@ namespace SecOne.NamedPipeWrapper.IO
         /// <exception cref="SerializationException">An object in the graph of type parameter <typeparamref name="T"/> is not marked as serializable.</exception>
         public void WriteObject(T obj)
         {
-            var keyString = (EncryptionKey == null) ? "null" : $"{EncryptionKey.Length} bytes";
             var data = Serialize(obj);
-
-            //Check if the data should be encrypted
-            if (EncryptionKey != null) data = EncryptBytes(data, EncryptionKey);
 
             WriteLength(data.Length);
             WriteObject(data);
             Flush();
+
+            //Now clear the data array
+            Array.Clear(data, 0, data.Length);
         }
 
         /// <summary>
