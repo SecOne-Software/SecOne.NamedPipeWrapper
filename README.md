@@ -1,6 +1,7 @@
 # Named Pipe Wrapper for .NET 4.0
 
-A simple, easy to use, strongly-typed wrapper around .NET named pipes. Originally forked from https://github.com/acdvorak/named-pipe-wrapper, with added some added features for encrypting traffic without having to use SSL.
+A simple, easy to use, strongly-typed wrapper around .NET named pipes. 
+Originally forked from https://github.com/acdvorak/named-pipe-wrapper, with added some added features for encrypting traffic without having to use SSL.
 
 # NuGet Package
 
@@ -12,6 +13,8 @@ Available as a [NuGet package](https://www.nuget.org/packages/NamedPipeWrapper/)
 *  Send strongly-typed messages between clients and servers: any serializable .NET object can be sent over a pipe and will be automatically serialized/deserialized, including cyclical references and complex object graphs.
 *  Messages are sent and received asynchronously on a separate background thread and marshalled back to the calling thread (typically the UI).
 *  Supports large messages - up to 300 MiB.
+*  Encryptes messages with a symmetric key derived using ECDH.
+
 
 # Requirements
 
