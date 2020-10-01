@@ -21,7 +21,7 @@ namespace SecOne.NamedPipeWrapper.IO
         /// </summary>
         public PipeStream BaseStream { get; private set; }
 
-        public byte[] EncryptionKey { get; set; }
+        public byte[] ProtectedEncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -46,7 +46,19 @@ namespace SecOne.NamedPipeWrapper.IO
                     _binaryFormatter.Serialize(memoryStream, obj);
 
                     //Check if we should return an encrypted array of data instead
-                    if (EncryptionKey != null) return EncryptStream(memoryStream, EncryptionKey);
+                    if (ProtectedEncryptionKey != null)
+                    {
+                        var key = SecureBytes.Unprotect(ProtectedEncryptionKey);
+
+                        try
+                        {
+                            return EncryptStream(memoryStream, key);
+                        }
+                        finally
+                        {
+                            Array.Clear(key, 0, key.Length);
+                        }
+                    }
 
                     return memoryStream.ToArray();
                 }

@@ -67,6 +67,8 @@ namespace SecOne.NamedPipeWrapper
 
         public void SetEncryptionKey(byte[] key, bool queue)
         {
+            Logger.Write($"Queue: {queue}");
+
             if (queue)
             {
                 //Set the value for the future once the next write has completed
@@ -74,6 +76,7 @@ namespace SecOne.NamedPipeWrapper
             }
             else
             {
+                //Setting the encryption key will zero out the array
                 _streamWrapper.SetEncryptionKey(key);
             }
         }
@@ -195,9 +198,12 @@ namespace SecOne.NamedPipeWrapper
                         _streamWrapper.WriteObject(_writeQueue.Take());
                         _streamWrapper.WaitForPipeDrain();
 
+                        //Setting the encryption key will zero out the array
                         if (_futureSymmetricKey != null)
                         {
                             _streamWrapper.SetEncryptionKey(_futureSymmetricKey);
+                            
+                            //Stop the key from being set again
                             _futureSymmetricKey = null;
                         }
                     }

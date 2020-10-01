@@ -84,10 +84,20 @@ namespace SecOne.NamedPipeWrapper.IO
 
         public void SetEncryptionKey(byte[] key)
         {
-            var keyString = (key == null) ? "null" : $"{key.Length} bytes";
+            try
+            {
+                var secureKey = SecureBytes.Protect(key);
 
-            _reader.EncryptionKey = key;
-            _writer.EncryptionKey = key;
+                _reader.ProtectedEncryptionKey = secureKey;
+                _writer.ProtectedEncryptionKey = secureKey;
+
+                //We have the key in secure format, so we can clear it now
+                Array.Clear(key, 0, key.Length);
+            }
+            catch (Exception ex)
+            {
+                Logger.Write($"Exception: {ex}");
+            }
         }
 
         /// <summary>

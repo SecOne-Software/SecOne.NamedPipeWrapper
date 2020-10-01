@@ -27,7 +27,7 @@ namespace SecOne.NamedPipeWrapper.IO
         /// </summary>
         public bool IsConnected { get; private set; }
 
-        public byte[] EncryptionKey { get; set; }
+        public byte[] ProtectedEncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -71,12 +71,21 @@ namespace SecOne.NamedPipeWrapper.IO
             BaseStream.Read(data, 0, len);
 
             //Check if we have to decrypt this data first
-            if (EncryptionKey != null)
+            if (ProtectedEncryptionKey != null)
             {
-                var encryptedData = DecryptBytes(data, EncryptionKey);
-                Array.Clear(data, 0, data.Length);
+                var key = SecureBytes.Unprotect(ProtectedEncryptionKey);
+                
+                try
+                {
+                    var encryptedData = DecryptBytes(data, key);
+                    Array.Clear(data, 0, data.Length);
 
-                data = encryptedData;
+                    data = encryptedData;
+                }
+                finally
+                {
+                    Array.Clear(key, 0, key.Length);
+                }
             }
 
             using (var memoryStream = new MemoryStream(data))
