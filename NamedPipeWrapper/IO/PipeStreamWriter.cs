@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security;
 using System.Security.Cryptography;
 
 namespace SecOne.NamedPipeWrapper.IO
@@ -21,7 +22,7 @@ namespace SecOne.NamedPipeWrapper.IO
         /// </summary>
         public PipeStream BaseStream { get; private set; }
 
-        public byte[] EncryptionKey { get; set; }
+        public SecureString EncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -74,44 +75,55 @@ namespace SecOne.NamedPipeWrapper.IO
             BaseStream.Flush();
         }
 
-        private byte[] EncryptStream(MemoryStream message, byte[] key)
+        private byte[] EncryptStream(MemoryStream message, SecureString key)
         {
             using (var aes = new AesCryptoServiceProvider())
             {
                 var iv = aes.IV;
 
                 using (var hashAlgorithm = new SHA256Managed())
+                using (var keyWrapper = new SecureStringWrapper(key))
                 {
                     //We derive a two keys, using sha256 hash, one Ke for encryption, the other Km for the mac
-                    var keyMaterialBytes = hashAlgorithm.ComputeHash(key);
+                    var keyMaterialBytes = hashAlgorithm.ComputeHash(keyWrapper.ToByteArray());
                     var ke = keyMaterialBytes.Take(16).ToArray();
                     var km = keyMaterialBytes.Skip(16).ToArray();
 
-                    //Encrypt the data
-                    using (var ms = new MemoryStream())
+                    try
                     {
-                        ms.Write(iv, 0, iv.Length);  // Add the IV to the first 16 bytes of the encrypted value
-
-                        using (var cs = new CryptoStream(ms, aes.CreateEncryptor(ke, aes.IV), CryptoStreamMode.Write))
+                        //Encrypt the data
+                        using (var ms = new MemoryStream())
                         {
-                            var messageBytes = message.ToArray();
+                            ms.Write(iv, 0, iv.Length);  // Add the IV to the first 16 bytes of the encrypted value
 
-                            cs.Write(messageBytes, 0, messageBytes.Length);
-                            cs.Close();
+                            using (var cs = new CryptoStream(ms, aes.CreateEncryptor(ke, aes.IV), CryptoStreamMode.Write))
+                            {
+                                var messageBytes = message.ToArray();
 
-                            Array.Clear(messageBytes, 0, messageBytes.Length);
+                                cs.Write(messageBytes, 0, messageBytes.Length);
+                                cs.Close();
+
+                                Array.Clear(messageBytes, 0, messageBytes.Length);
+                            }
+
+                            var cypher = ms.ToArray();
+                            var hash = new HMACSHA256(km);
+                            var mac = hash.ComputeHash(cypher);
+
+                            //Append the MAC to the end of the array of bytes
+                            byte[] output = new byte[cypher.Length + mac.Length];
+                            Buffer.BlockCopy(cypher, 0, output, 0, cypher.Length);
+                            Buffer.BlockCopy(mac, 0, output, cypher.Length, mac.Length);
+
+                            return output;
                         }
-
-                        var cypher = ms.ToArray();
-                        var hash = new HMACSHA256(km);
-                        var mac = hash.ComputeHash(cypher);
-
-                        //Append the MAC to the end of the array of bytes
-                        byte[] output = new byte[cypher.Length + mac.Length];
-                        Buffer.BlockCopy(cypher, 0, output, 0, cypher.Length);
-                        Buffer.BlockCopy(mac, 0, output, cypher.Length, mac.Length);
-
-                        return output;
+                    }
+                    finally
+                    {
+                        //Clear up all the derived material. The original key bytes will be disposed
+                        Array.Clear(keyMaterialBytes, 0, keyMaterialBytes.Length);
+                        Array.Clear(ke, 0, ke.Length);
+                        Array.Clear(km, 0, km.Length);
                     }
                 }
             }

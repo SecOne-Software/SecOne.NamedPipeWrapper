@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -27,7 +28,7 @@ namespace SecOne.NamedPipeWrapper.IO
         /// </summary>
         public bool IsConnected { get; private set; }
 
-        public byte[] EncryptionKey { get; set; }
+        public SecureString EncryptionKey { get; set; }
 
         private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
 
@@ -88,44 +89,55 @@ namespace SecOne.NamedPipeWrapper.IO
             }
         }
 
-        private byte[] DecryptBytes(byte[] bytes, byte[] key)
+        private byte[] DecryptBytes(byte[] bytes, SecureString key)
         {
             using (var hashAlgorithm = new SHA256Managed())
+            using (var keyWrapper = new SecureStringWrapper(key))
             {
                 //We derive a two keys, using sha256 hash, one Ke for encryption, the other Km for the mac
-                var keyMaterialBytes = hashAlgorithm.ComputeHash(key);
+                var keyMaterialBytes = hashAlgorithm.ComputeHash(keyWrapper.ToByteArray());
                 var ke = keyMaterialBytes.Take(16).ToArray();
                 var km = keyMaterialBytes.Skip(16).ToArray();
 
-                var mac = bytes.Skip(bytes.Length - 32).ToArray();
-                var cypher = bytes.Take(bytes.Length - 32).ToArray();
+                try
+                { 
+                    var mac = bytes.Skip(bytes.Length - 32).ToArray();
+                    var cypher = bytes.Take(bytes.Length - 32).ToArray();
 
-                //Verify the mac
-                var hash = new HMACSHA256(km);
-                var verify = hash.ComputeHash(cypher);
+                    //Verify the mac
+                    var hash = new HMACSHA256(km);
+                    var verify = hash.ComputeHash(cypher);
 
-                if (!verify.SequenceEqual(mac)) throw new Exception("MAC supplied does not match.");
+                    if (!verify.SequenceEqual(mac)) throw new Exception("MAC supplied does not match.");
 
-                //Decrypt the remaining bytes
-                //Note this uses BC block mode by default
-                using (var aes = new AesCryptoServiceProvider())
-                {
-                    using (var outputStream = new MemoryStream())
+                    //Decrypt the remaining bytes
+                    //Note this uses BC block mode by default
+                    using (var aes = new AesCryptoServiceProvider())
                     {
-                        using (var ms = new MemoryStream(cypher))
+                        using (var outputStream = new MemoryStream())
                         {
-                            var iv = new byte[16];
-                            ms.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
-
-                            using (var cs = new CryptoStream(outputStream, aes.CreateDecryptor(ke, iv), CryptoStreamMode.Write))
+                            using (var ms = new MemoryStream(cypher))
                             {
-                                cs.Write(cypher, 16, cypher.Length - 16);
-                                cs.Close();
-                            }
+                                var iv = new byte[16];
+                                ms.Read(iv, 0, 16);  // Pull the IV from the first 16 bytes of the encrypted value
 
-                            return outputStream.ToArray();
+                                using (var cs = new CryptoStream(outputStream, aes.CreateDecryptor(ke, iv), CryptoStreamMode.Write))
+                                {
+                                    cs.Write(cypher, 16, cypher.Length - 16);
+                                    cs.Close();
+                                }
+
+                                return outputStream.ToArray();
+                            }
                         }
                     }
+                }
+                finally
+                {
+                    //Clear up all the derived material. The original key bytes will be disposed
+                    Array.Clear(keyMaterialBytes, 0, keyMaterialBytes.Length);
+                    Array.Clear(ke, 0, ke.Length);
+                    Array.Clear(km, 0, km.Length);
                 }
             }
         }

@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.Serialization;
+using System.Security;
+using System.Text;
 
 namespace SecOne.NamedPipeWrapper.IO
 {
@@ -84,10 +86,18 @@ namespace SecOne.NamedPipeWrapper.IO
 
         public void SetEncryptionKey(byte[] key)
         {
-            var keyString = (key == null) ? "null" : $"{key.Length} bytes";
+            //Place the key into a securestring using utf-8 encoding
+            char chr;
+            var secureString = new SecureString();
 
-            _reader.EncryptionKey = key;
-            _writer.EncryptionKey = key;
+            for (var i = 0; i < key.Length; i++)
+            {
+                chr = Encoding.UTF8.GetChars(key, i, 1)[0];
+                secureString.AppendChar(chr);
+            }                
+
+            _reader.EncryptionKey = secureString;
+            _writer.EncryptionKey = secureString;
         }
 
         /// <summary>
