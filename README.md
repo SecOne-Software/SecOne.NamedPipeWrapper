@@ -1,6 +1,6 @@
 # Named Pipe Wrapper for .NET 4.0
 
-A simple, easy to use, strongly-typed wrapper around .NET named pipes.
+A simple, easy to use, strongly-typed wrapper around .NET named pipes. Originally forked from https://github.com/acdvorak/named-pipe-wrapper, with added some added features for encrypting traffic without having to use SSL.
 
 # NuGet Package
 
