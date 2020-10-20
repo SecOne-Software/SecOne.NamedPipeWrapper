@@ -3,10 +3,6 @@
 A simple, easy to use, strongly-typed wrapper around .NET named pipes. 
 Originally forked from https://github.com/acdvorak/named-pipe-wrapper, with added some added features for encrypting traffic without having to use SSL.
 
-# NuGet Package
-
-Available as a [NuGet package](https://www.nuget.org/packages/NamedPipeWrapper/).
-
 # Features
 
 *  Create named pipe servers that can handle multiple client connections simultaneously.
@@ -61,7 +57,3 @@ client.Start();
 
 // ...
 ```
-
-# MIT License
-
-Named Pipe Wrapper for .NET is licensed under the [MIT license](LICENSE.txt).
